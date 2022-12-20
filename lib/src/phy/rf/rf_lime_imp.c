@@ -702,7 +702,8 @@ double rf_lime_set_rx_srate(void* h, double rate)
     rf_lime_stop_rx_stream(handler);
   }
 
-  if (LMS_SetSampleRateDir(handler->device, LMS_CH_RX, rate, handler->dec_inter) != 0) {
+  if (LMS_SetSampleRate(handler->device, rate, handler->dec_inter) != 0) {
+  //if (LMS_SetSampleRateDir(handler->device, LMS_CH_RX, rate, handler->dec_inter) != 0) {
     printf("LMS_SetSampleRate: Failed to set RX sampling rate\n");
     return SRSRAN_ERROR;
   }
@@ -711,6 +712,12 @@ double rf_lime_set_rx_srate(void* h, double rate)
   if (LMS_GetSampleRate(handler->device, false, 0, &srate, NULL) != 0) {
     printf("LMS_GetSampleRate: Failed to get RX sampling rate\n");
     return SRSRAN_ERROR;
+  }
+
+  // Workaround for bug in LimeSDR-Mini where sample rate fetched after setting is slightly off
+  // from the set value.
+  if (strcmp(handler->devname, DEVNAME_MINI) == 0 && ((uint32_t)srate % (uint32_t)rate) != 0) {
+    srate = rate;
   }
 
   handler->rx_rate = srate;
@@ -774,6 +781,12 @@ double rf_lime_set_tx_srate(void* h, double rate)
   if (LMS_GetSampleRate(handler->device, true, 0, &srate, NULL) != 0) {
     printf("LMS_GetSampleRate: Failed to get TX sampling rate\n");
     return SRSRAN_ERROR;
+  }
+
+  // Workaround for bug in LimeSDR-Mini where sample rate fetched after setting is slightly off
+  // from the set value.
+  if (strcmp(handler->devname, DEVNAME_MINI) == 0 && ((uint32_t)srate % (uint32_t)rate) != 0) {
+    srate = rate;
   }
 
   printf("TX sampling rate: %.2f\n", srate / 1e6);
