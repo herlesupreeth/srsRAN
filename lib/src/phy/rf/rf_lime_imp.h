@@ -1,7 +1,7 @@
 /*
  * Copyright 2013-2020 Software Radio Systems Limited
  * Copyright 2020-2022 Lime Microsystems Ltd
- * 
+ *
  * This file is part of srsRAN.
  *
  * srsRAN is free software: you can redistribute it and/or modify
@@ -30,7 +30,9 @@
 
 #define DEVNAME_USB "LimeSDR-USB"
 #define DEVNAME_MINI "LimeSDR-Mini"
+#define DEVNAME_MINI_V2 "LimeSDR-Mini_v2"
 #define DEVNAME_CC "LimeSDR-Core"
+#define DEVNAME_NET_MICRO "LimeNET-Micro"
 
 extern rf_dev_t srsran_rf_dev_lime;
 

@@ -46,9 +46,15 @@
 #define DIGITAL_GFIR_COEFF 0.95
 #define ANALOG_LPF_COEFF 1
 
+// Helper functions to set correct RF path based on the frequency.
+int set_tx_antenna(void* h, double freq);
+int set_rx_antenna(void* h, double freq);
+
 typedef struct {
   const char*   devname;
   lms_device_t* device;
+  // Large enough buffer to hold device args.
+  char args[1024];
 
   lms_stream_t rxStream[SRSRAN_MAX_PORTS];
   lms_stream_t txStream[SRSRAN_MAX_PORTS];
@@ -378,6 +384,9 @@ int rf_lime_open_multi(char* args, void** h, uint32_t num_requested_channels)
   handler->need_rx_cal      = true;
   handler->need_tx_cal      = true;
   handler->devname          = LMS_GetDeviceInfo(sdr)->deviceName;
+  // Store args.
+  strcpy(handler->args, args);
+  handler->args[strlen(handler->args)] = '\0';
 
   // Check whether config file is available
   char  config_arg[]   = "config=";
@@ -934,6 +943,10 @@ double rf_lime_set_rx_freq(void* h, uint32_t ch, double freq)
     return SRSRAN_ERROR;
   }
 
+  // Set up antennas based on frequency range used
+  // Skip antenna configuration if config file is loaded
+  set_rx_antenna(h, freq);
+
   return actual_freq;
 }
 
@@ -950,6 +963,9 @@ double rf_lime_set_tx_freq(void* h, uint32_t ch, double freq)
     printf("LMS_GetLOFrequency: Failed to get LO frequency\n");
     return SRSRAN_ERROR;
   }
+
+  // Set up antennas based on frequency range used
+  set_tx_antenna(h, freq);
 
   return actual_freq;
 }
@@ -1114,6 +1130,93 @@ int rf_lime_send_timed_multi(void*  h,
     printf("Too many trials\n");
   }
   return num_total_samples;
+}
+
+int set_tx_antenna(void* h, double freq)
+{
+  rf_lime_handler_t* handler = (rf_lime_handler_t*)h;
+  // Set up antennas.
+  lms_name_t tx_ant_list[16] = {0};
+  LMS_GetAntennaList(handler->device, LMS_CH_TX, 0, tx_ant_list);
+  // Skip antenna configuration if config file is loaded.
+  if (!handler->config_file) {
+    // LMS_PATH_TX2 - Range(2e9, 2.6e9)Hz.
+    size_t ant_tx_path = LMS_PATH_TX2;
+
+    char txant_arg[] = "txant=";
+    char* txant_ptr = strstr(handler->args, txant_arg);
+
+    // Skip if TX antenna is specified in device args.
+    if (!txant_ptr) {
+      // LMS_PATH_TX1 - Range(30e6, 1.9e9)Hz.
+      if (freq < 2.0e9) {
+        ant_tx_path = LMS_PATH_TX1;
+      }
+
+      if (strcmp(handler->devname, DEVNAME_MINI) == 0) {
+        if (freq < 2.0e9) {
+          ant_tx_path = LMS_PATH_TX2;
+        } else {
+          ant_tx_path = LMS_PATH_TX1;
+        }
+      }
+      for (size_t i = 0; i < handler->num_tx_channels; i++) {
+        if (LMS_SetAntenna(handler->device, LMS_CH_TX, i, ant_tx_path) != 0) {
+          printf("LMS_SetAntenna: Failed to set TX antenna\n");
+          return SRSRAN_ERROR;
+        }
+      }
+    }
+  }
+  // Print current used paths
+  printf("TX antenna/s changed to: %s\n", tx_ant_list[LMS_GetAntenna(handler->device, LMS_CH_TX, 0)]);
+  return SRSRAN_SUCCESS;
+}
+
+int set_rx_antenna(void* h, double freq)
+{
+  rf_lime_handler_t* handler = (rf_lime_handler_t*)h;
+  // Set up antennas
+  lms_name_t rx_ant_list[16] = {0};
+  LMS_GetAntennaList(handler->device, LMS_CH_RX, 0, rx_ant_list);
+  // Skip antenna configuration if config file is loaded
+  if (!handler->config_file) {
+    // Default paths for > 1700 MHz
+    size_t ant_rx_path = LMS_PATH_LNAH;
+
+    char rxant_arg[] = "rxant=";
+    char* rxant_ptr = strstr(handler->args, rxant_arg);
+
+    // Skip if RX antenna is specified in device args.
+    if (!rxant_ptr) {
+      if (strcmp(handler->devname, DEVNAME_MINI) == 0) {
+        if (freq < 1.7e9) {
+          ant_rx_path = LMS_PATH_LNAW;
+        }
+      }
+      if (strcmp(handler->devname, DEVNAME_NET_MICRO) == 0) {
+        if (freq < 1.7e9) {
+          ant_rx_path = LMS_PATH_LNAL;
+        }
+      }
+      if (strcmp(handler->devname, DEVNAME_USB) == 0) {
+        if (freq < 900.0e6) {
+          ant_rx_path = LMS_PATH_LNAL;
+        } else if (freq < 1.7e9) {
+          ant_rx_path = LMS_PATH_LNAW;
+        }
+      }
+      for (size_t i = 0; i < handler->num_rx_channels; i++) {
+        if (LMS_SetAntenna(handler->device, LMS_CH_RX, i, ant_rx_path) != 0) {
+          printf("LMS_SetAntenna: Failed to set RX antenna\n");
+          return SRSRAN_ERROR;
+        }
+      }
+    }
+  }
+  // Print current used paths
+  printf("RX antenna/s changed to: %s\n", rx_ant_list[LMS_GetAntenna(handler->device, LMS_CH_RX, 0)]);
+  return SRSRAN_SUCCESS;
 }
 
 rf_dev_t srsran_rf_dev_lime = {"lime",
