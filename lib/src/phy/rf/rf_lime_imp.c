@@ -418,6 +418,12 @@ int rf_lime_open_multi(char* args, void** h, uint32_t num_requested_channels)
   char  refclk_str[64] = {0};
   char* refclk_ptr     = strstr(args, refclk_arg);
   if (refclk_ptr) {
+    // Workaround for bug while settings external clock.
+    // First reset and then set.
+    if (LMS_SetClockFreq(sdr, LMS_CLOCK_EXTREF, 0.0f) != 0) {
+      printf("LMS_SetClockFreq: failed to reset external clock\n");
+      return SRSRAN_ERROR;
+    }
     copy_subdev_string(refclk_str, refclk_ptr + strlen(refclk_arg));
     double freq = atof(refclk_str);
     printf("Setting reference clock to %.2f MHz\n", freq / 1e6);
