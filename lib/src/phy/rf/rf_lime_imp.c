@@ -1,5 +1,5 @@
 /**
- * Copyright 2013-2022 Software Radio Systems Limited 
+ * Copyright 2013-2022 Software Radio Systems Limited
  * Copyright 2020-2002 Lime MicroSystems Ltd
  *
  * This file is part of srsRAN.
@@ -27,8 +27,8 @@
 #include <unistd.h>
 
 #include "rf_helper.h"
-#include "rf_plugin.h"
 #include "rf_lime_imp.h"
+#include "rf_plugin.h"
 #include "srsran/phy/common/phy_common.h"
 #include "srsran/phy/common/timestamp.h"
 #include "srsran/phy/utils/debug.h"
@@ -178,7 +178,7 @@ double get_channel_bw(double rate)
 #ifdef FORCE_STANDARD_RATE
   return rate / 1.536;
 #else
-  
+
   double rounded_rate = round(rate / 100) * 100;
   if (rate < 5.76e6)
     return rate / 1.536;
@@ -211,19 +211,19 @@ int rf_lime_start_tx_stream(void* h)
   if (handler->tx_stream_active == false) {
     if (handler->calibrate & CALIBRATE_IQDC && handler->need_tx_cal) {
       bool streamActive = handler->rx_stream_active;
-      if(streamActive) {
+      if (streamActive) {
         rf_lime_stop_rx_stream(h);
       }
       double bandwidth = get_channel_bw(handler->tx_rate);
       double cal_bw    = bandwidth > 2.5e6 ? bandwidth : 2.5e6;
-      for(size_t ch = 0; ch < handler->num_tx_channels; ch++) {
+      for (size_t ch = 0; ch < handler->num_tx_channels; ch++) {
         printf("Calibrating TX channel: %lu, BW: %.2f\n", ch, cal_bw / 1e6);
         if (LMS_Calibrate(handler->device, LMS_CH_TX, ch, cal_bw, 0) != 0) {
           printf("LMS_Calibrate: Failed to calibrate TX channel :%lu\n", ch);
         }
       }
-      if(streamActive) {
-        rf_lime_start_rx_stream(h,true);
+      if (streamActive) {
+        rf_lime_start_rx_stream(h, true);
       }
       handler->need_tx_cal = false;
     }
@@ -259,18 +259,18 @@ int rf_lime_start_rx_stream(void* h, bool now)
   if (handler->rx_stream_active == false) {
     if (handler->calibrate & CALIBRATE_IQDC && handler->need_rx_cal) {
       bool streamActive = handler->tx_stream_active;
-      if(streamActive) {
+      if (streamActive) {
         rf_lime_stop_tx_stream(h);
       }
       double bandwidth = get_channel_bw(handler->rx_rate);
       double cal_bw    = bandwidth > 2.5e6 ? bandwidth : 2.5e6;
-      for(size_t ch = 0; ch < handler->num_rx_channels; ch++) {
+      for (size_t ch = 0; ch < handler->num_rx_channels; ch++) {
         printf("Calibrating RX channel: %lu, BW: %.2f\n", ch, cal_bw / 1e6);
         if (LMS_Calibrate(handler->device, LMS_CH_RX, ch, cal_bw, 0) != 0) {
           printf("LMS_Calibrate: Failed to calibrate RX channel :%lu\n", ch);
         }
       }
-      if(streamActive) {
+      if (streamActive) {
         rf_lime_start_tx_stream(h);
       }
       handler->need_rx_cal = false;
@@ -374,7 +374,7 @@ int rf_lime_open_multi(char* args, void** h, uint32_t num_requested_channels)
   handler->device           = sdr;
   handler->tx_stream_active = false;
   handler->rx_stream_active = false;
-  handler->config_file      = false;  
+  handler->config_file      = false;
   handler->need_rx_cal      = true;
   handler->need_tx_cal      = true;
   handler->devname          = LMS_GetDeviceInfo(sdr)->deviceName;
@@ -501,10 +501,10 @@ int rf_lime_open_multi(char* args, void** h, uint32_t num_requested_channels)
   // Skip antenna configuration if config file is loaded
   if (!handler->config_file) {
     // Default paths for > 1700 MHz
-    size_t ant_rx_path = LMS_PATH_LNAH;
-    size_t ant_tx_path = LMS_PATH_TX2;
-    bool skip_rx_mini_path = false;
-    bool skip_tx_mini_path = false;
+    size_t ant_rx_path       = LMS_PATH_LNAH;
+    size_t ant_tx_path       = LMS_PATH_TX2;
+    bool   skip_rx_mini_path = false;
+    bool   skip_tx_mini_path = false;
 
     if (strcmp(handler->devname, DEVNAME_MINI) == 0) {
       skip_rx_mini_path = true;
@@ -518,14 +518,14 @@ int rf_lime_open_multi(char* args, void** h, uint32_t num_requested_channels)
     char  txant_arg[]   = "txant=";
     char  txant_str[64] = {0};
     char* txant_ptr     = strstr(args, txant_arg);
-    
+
     // RX antenna
     if (rxant_ptr) {
       copy_subdev_string(rxant_str, rxant_ptr + strlen(rxant_arg));
       // Find the required path
       for (int i = 0; i < num_rx_antennas; i++) {
         if (strstr(rxant_str, rx_ant_list[i])) {
-          ant_rx_path = i;
+          ant_rx_path       = i;
           skip_rx_mini_path = false;
           break;
         }
@@ -538,7 +538,7 @@ int rf_lime_open_multi(char* args, void** h, uint32_t num_requested_channels)
       // Find the required path
       for (int i = 0; i < num_tx_antennas; i++) {
         if (strstr(txant_str, tx_ant_list[i])) {
-          ant_tx_path = i;
+          ant_tx_path       = i;
           skip_tx_mini_path = false;
           break;
         }
@@ -616,7 +616,7 @@ int rf_lime_open_multi(char* args, void** h, uint32_t num_requested_channels)
   char* tcxo_ptr     = strstr(args, tcxo_arg);
   if (tcxo_ptr) {
     copy_subdev_string(tcxo_str, tcxo_ptr + strlen(tcxo_arg));
-    int tcxo_val = atoi(tcxo_str);
+    int        tcxo_val      = atoi(tcxo_str);
     const char empty_arg[16] = "";
     printf("Setting TCXO value to %d\n", tcxo_val);
     if (LMS_WriteCustomBoardParam(handler->device, 0, tcxo_val, empty_arg) != 0) {
@@ -703,7 +703,7 @@ double rf_lime_set_rx_srate(void* h, double rate)
   }
 
   if (LMS_SetSampleRate(handler->device, rate, handler->dec_inter) != 0) {
-  //if (LMS_SetSampleRateDir(handler->device, LMS_CH_RX, rate, handler->dec_inter) != 0) {
+    // if (LMS_SetSampleRateDir(handler->device, LMS_CH_RX, rate, handler->dec_inter) != 0) {
     printf("LMS_SetSampleRate: Failed to set RX sampling rate\n");
     return SRSRAN_ERROR;
   }
@@ -770,9 +770,9 @@ double rf_lime_set_tx_srate(void* h, double rate)
   if (stream_active) {
     rf_lime_stop_tx_stream(handler);
   }
-  
-  if(LMS_SetSampleRate(handler->device, rate, handler->dec_inter) != 0) {
-  //if (LMS_SetSampleRateDir(handler->device, LMS_CH_TX, rate, handler->dec_inter) != 0) {
+
+  if (LMS_SetSampleRate(handler->device, rate, handler->dec_inter) != 0) {
+    // if (LMS_SetSampleRateDir(handler->device, LMS_CH_TX, rate, handler->dec_inter) != 0) {
     printf("LMS_SetSampleRate: Failed to set TX sampling rate\n");
     return SRSRAN_ERROR;
   }
@@ -989,8 +989,8 @@ int rf_lime_recv_with_time_multi(void*    h,
 
   do {
     for (size_t ch = 0; ch < handler->num_rx_channels; ch++) {
-        cf_t* data_c  = (cf_t*)data[ch];
-        buffs_ptr[ch] = &data_c[num_total_samples];
+      cf_t* data_c  = (cf_t*)data[ch];
+      buffs_ptr[ch] = &data_c[num_total_samples];
     }
 
     uint32_t num_samples_left = nsamples - num_total_samples;
@@ -1055,7 +1055,6 @@ int rf_lime_send_timed_multi(void*  h,
                              bool   is_start_of_burst,
                              bool   is_end_of_burst)
 {
-
   rf_lime_handler_t* handler = (rf_lime_handler_t*)h;
   lms_stream_meta_t  meta;
   int                num_total_samples        = 0;
@@ -1080,7 +1079,7 @@ int rf_lime_send_timed_multi(void*  h,
 
   void* buffs_ptr[SRSRAN_MAX_CHANNELS] = {};
   for (size_t ch = 0; ch < handler->num_tx_channels; ch++) {
-      buffs_ptr[ch] = data[ch];
+    buffs_ptr[ch] = data[ch];
   }
 
   do {
