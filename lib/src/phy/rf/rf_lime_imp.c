@@ -79,7 +79,7 @@ typedef struct {
   pthread_t async_thread;
 } rf_lime_handler_t;
 
-cf_t zero_mem[64 * 1024];
+cf_t lime_zero_mem[64 * 1024];
 
 #if HAVE_ASYNC_THREAD
 static void log_overflow(rf_lime_handler_t* h)
@@ -1062,7 +1062,7 @@ int rf_lime_send_timed(void*  h,
                        bool   is_start_of_burst,
                        bool   is_end_of_burst)
 {
-  void* _data[SRSRAN_MAX_PORTS] = {data, zero_mem, zero_mem, zero_mem};
+  void* _data[SRSRAN_MAX_PORTS] = {data, lime_zero_mem, lime_zero_mem, lime_zero_mem};
   return rf_lime_send_timed_multi(
       h, _data, nsamples, secs, frac_secs, has_time_spec, blocking, is_start_of_burst, is_end_of_burst);
 }
